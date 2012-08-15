@@ -1,0 +1,207 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+"http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<!-- saved from url=(0014)about:internet -->
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+
+<title>second.extinctM</title>
+
+<base target="_blank"/>
+
+<style type="text/css">
+body, td {
+   font-family: sans-serif;
+   background-color: white;
+   font-size: 12px;
+   margin: 8px;
+}
+
+tt, code, pre {
+   font-family: 'DejaVu Sans Mono', 'Droid Sans Mono', 'Lucida Console', Consolas, Monaco, monospace;
+}
+
+h1 { 
+   font-size:2.2em; 
+}
+
+h2 { 
+   font-size:1.8em; 
+}
+
+h3 { 
+   font-size:1.4em; 
+}
+
+h4 { 
+   font-size:1.0em; 
+}
+
+h5 { 
+   font-size:0.9em; 
+}
+
+h6 { 
+   font-size:0.8em; 
+}
+
+a:visited {
+   color: rgb(50%, 0%, 50%);
+}
+
+pre {	
+   margin-top: 0;
+   max-width: 95%;
+   border: 1px solid #ccc;
+}
+
+pre code {
+   display: block; padding: 0.5em;
+}
+
+code.r {
+   background-color: #F8F8F8;
+}
+
+table, td, th {
+  border: none;
+}
+
+blockquote {
+   color:#666666;
+   margin:0;
+   padding-left: 1em;
+   border-left: 0.5em #EEE solid;
+}
+
+hr {
+   height: 0px;
+   border-bottom: none;
+   border-top-width: thin;
+   border-top-style: dotted;
+   border-top-color: #999999;
+}
+
+@media print {
+   * { 
+      background: transparent !important; 
+      color: black !important; 
+      filter:none !important; 
+      -ms-filter: none !important; 
+   }
+
+   body { 
+      font-size:12pt; 
+      max-width:100%; 
+   }
+       
+   a, a:visited { 
+      text-decoration: underline; 
+   }
+
+   hr { 
+      visibility: hidden;
+      page-break-before: always;
+   }
+
+   pre, blockquote { 
+      padding-right: 1em; 
+      page-break-inside: avoid; 
+   }
+
+   tr, img { 
+      page-break-inside: avoid; 
+   }
+
+   img { 
+      max-width: 100% !important; 
+   }
+
+   @page :left { 
+      margin: 15mm 20mm 15mm 10mm; 
+   }
+     
+   @page :right { 
+      margin: 15mm 10mm 15mm 20mm; 
+   }
+
+   p, h2, h3 { 
+      orphans: 3; widows: 3; 
+   }
+
+   h2, h3 { 
+      page-break-after: avoid; 
+   }
+}
+
+</style>
+
+
+
+
+
+</head>
+
+<body>
+<h1>second.extinctM</h1>
+
+<p>Fork of second.extinct function on bipartite package, R</p>
+
+<h2>Description: </h2>
+
+<p>This function is an update to the <code>second.extinct</code> function in the bipartite package to add a method for removing species according to its topological role in the network based on Modularity analysis. The method removes first network hubs, next module hubs, next connectors and finnally peripherial species. Species are removed randomly withinn a role.</p>
+
+<h2>Usage:</h2>
+
+<pre><code>second.extinctM(web, participant = &quot;higher&quot;, method = &quot;abun&quot;, nrep
+= 10, details = FALSE, pol_ntw_hubs = NA, pol_mod_hubs = NA,
+pol_conn = NA, pol_periph = NA, plant_ntw_hubs = NA, plant_mod_hubs
+= NA, plant_conn = NA, plant_periph = NA)
+</code></pre>
+
+<h2>Arguments:</h2>
+
+<p><strong>web:</strong> Web is a matrix representing the interactions observed between higher trophic level species (columns) and lower trophic level species (rows). Usually this will be number of pollinators on each species of plants or number of parasitoids on each species of prey.</p>
+
+<p><strong>participant:</strong> high (default) or low or both, depending if you want to exterminate higher trophic level species, lower trophic level species, or a randomly chosen species of both levels; partial matching.</p>
+
+<p><strong>method:</strong> Random deletion of a species (<code>random</code>); according to its abundance, with least abundant going extinct first (<code>abundance</code>; default) or &ldquo;<code>degree</code>&rdquo; to build a sequence from the best-to-least connected species. This is the most extreme case, where the most generalist species goes extinct first (see Memmott et al. 1998). New method &ldquo;<code>modularity</code>&rdquo; is added, and removes first network hubs, next module hubs, next connectors and finnally peripherial species. Species are removed randomly withinn a role (see Albretch et al in prep.)</p>
+
+<p><strong>nrep:</strong> Number of replicates of extermination sequence. Will not be considered for method abundance.</p>
+
+<p><strong>details:</strong> Logical; returns details, i.e. for each replicate the sequence of secondary extinctions. If set to <code>FALSE</code> (default), replicated runs will be averaged.</p>
+
+<p><strong>pol_ntw_hubs, pol_mod_hubs, &hellip;:</strong> Vector of species names comprising each topological role (matching web colnames and rownames). If method is different from &ldquo;modularity&rdquo; is depreciated.</p>
+
+<h2>Details:</h2>
+
+<p>Internally, each extermination is achieved by a call to <code>extinctionM</code>, followed by a call to <code>empty</code>, which counts the number of all-zero columns and rows.</p>
+
+<p><strong>Note:</strong> The length of an extinction sequence is obviously given by the number of species in the selected trophic level. When setting participant=&ldquo;<code>both</code>&rdquo;, lengths will differ for each replicate run, since it is unpredictable in which sequence species go extinct, and hence how many secondary extinctions will pre-empt further primary extinctions.</p>
+
+<h2>Author(s)</h2>
+
+<p>Carsten F. Dormann wrote the initial function and Ignasi Bartomeus addedd the modularity method.</p>
+
+<h2>Example</h2>
+
+<pre><code>#load data example
+data(Safariland)
+#need to define network roles (here I did that randomly)
+pol_ntw_hubs &lt;- colnames(web)[1:3]
+pol_mod_hubs &lt;- colnames(web)[4:10]
+pol_conn &lt;- colnames(web)[11:18]
+pol_periph &lt;- colnames(web)[19:27]
+plant_ntw_hubs &lt;- rownames(web)[1:3]
+plant_mod_hubs &lt;- rownames(web)[4:6]
+plant_conn &lt;- rownames(web)[7:8]
+plant_periph &lt;- rownames(web)[9]
+
+x &lt;- second.extinctM(web, participant = &quot;lower&quot;, method = &quot;modularity&quot;, nrep = 10, details = FALSE, pol_ntw_hubs = pol_ntw_hubs, pol_mod_hubs = pol_mod_hubs, pol_conn = pol_conn, pol_periph = pol_periph, plant_ntw_hubs = plant_ntw_hubs, plant_mod_hubs = plant_mod_hubs, plant_conn = plant_conn, plant_periph = plant_periph)
+robustness(x)
+</code></pre>
+
+</body>
+
+</html>
+
