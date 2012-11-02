@@ -7,6 +7,8 @@ Description:
 ------------
 This function is an update to the ```second.extinct``` function in the bipartite package to add a method for removing species according to its topological role in the network based on Modularity analysis. The method removes first network hubs, next module hubs, next connectors and finnally peripherial species. Species are removed randomly withinn a role.
 
+Note: If you want to invert the order of the simulated exctinctions (i.e. peripherial first), just atribute the periferial species to the Network Hub label, and so forth. I know this is not elegant, but it works.
+
 Usage:
 ------
 ```
