@@ -16,5 +16,5 @@ Description: Example with real data on how to run hierarchichal models that inco
 
 ### Simulated Networks
 
-Description: I tried to create biologically meaninful random networks, but I end up not using them. Sim_ ntw.R does it in a quite elaborated way. I also run some hierarchichal models on them. Sim_ntw2.R has simplier alternatives and try reproduce Bluthegen et al. 2008 approrech, but I didn't quite succed (or invest much time).
+Description: I tried to create biologically meaninful random networks, but I end up not using them. Sim_ ntw.R does it in a quite elaborated way. I also run some hierarchichal models on them. Sim_ntw2.R has simplier alternatives and try to reproduce Bluthegen et al. 2008 approach, but I didn't quite succeed (or invest much time).
 
