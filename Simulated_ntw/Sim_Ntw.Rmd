@@ -1,0 +1,302 @@
+Creates random realistic simulated networks
+========================================================
+
+- Simulated network:
+----------------------
+#This buits artificial networks with all the components distinctive of real networks. To construct them, first I created two set of species, plants and pollinators with a skewed abundance by using a gamma distribution. This is representative of natural communities where some species are dominant and others rare. 10 % of the pollinators where randomly attributed the category of specialists by using a binomial distribution. For plants flower size and presence of nectar was randomly attributed by using a Normal distribution and an binomial distribution, respectively. Finally we also overlayed a phenological timing for both species sets that can get two values, "full season" or "late or early season" by using a binomial distribution. Plant random properties were included in a K-mean algorithm to agrupate plants in K families (k = 6). The interaction between plant and pollinators depend on both groups abundance, the flower size and the presence of nectar plus an error term. Moreover, for specialist pollinators interactions were constrain within a single random plant family. Finally, pairs of species that both present early-late season combinations, its links where removed. The intercept was fixed to get realistic values. Network size, number of rounds sampled, and the probability of detectaion can be specified.
+
+```{r load}
+library(reshape)
+library(bipartite)
+library(unmarked)
+```
+
+Create Pollinators#
+-------------------
+
+```{r pollinators}
+nPolinators <- sample(20:40,1)
+
+Abund_pol <- round(rgamma(nPolinators, shape = 2, scale = 2))   #gamma distr incorporating dominance. #abundance in visits per day to a 50 m plot.
+hist(Abund_pol)
+
+Specialist <- rbinom(nPolinators, 1, 0.1) #10% are specialists
+Pheno_pol <- rbinom(nPolinators, 1, 0.8) # 1 all phenology; 0 early spring)
+
+```
+
+Create Plants
+---------------
+  
+```{r plants}  
+nPlants <- sample(10:25,1)
+Abund_plant <- round(rgamma(nPlants, shape = 2, scale = 2))   #gamma simulating real community dominance #Abund in plants per area
+hist(Abund_plant)
+Flower_Size <- rnorm(nPlants, mean = 25, sd = 10)   #normal distr with mean = 25 mm sd = 10
+hist(Flower_Size)
+Nectar <- rbinom(nPlants, 1, 0.5)   # yes/No
+Pheno_plant <- rbinom(nPlants, 1, 0.8) # 1 all phenology; 0 early spring)
+Plant_morphology  <-  rbinom(nPlants, 1, 0.5) #zigomorphic/simetric
+Plant_family <- kmeans(data.frame(Flower_Size, Plant_morphology, Nectar) ,6)$cluster # done for specialist interactions. Is based by grouping traits. 
+#error = rnorm(nPlants,0,3) #not needed
+```
+
+Network 
+--------
+
+```{r networks}
+#Sampling events
+nVisits <- 2
+#detection probability
+p <- 0.3 #if we asume visits to one day (10 hours) 0.3 imply a sampling effort of 3 hours
+
+
+#for each polinator 
+
+P <- list()
+full_Ntw <- matrix(ncol = nPolinators, nrow = nPlants)
+for(i in 1: nPolinators){
+
+  if(Specialist[i] == 0){
+
+  # Suppose that expected visitation is a function of:
+
+    lambda <- (rep(Abund_pol[i], length(Abund_plant)) * Abund_plant) + Flower_Size + (Nectar*25)
+    #lambda is a linear combination of both abundances, of flower size (scales to the range of half the     abundances) and nectar (idem); Add plant morphology?
+    min(lambda)
+    mean(lambda)
+    median(lambda)
+    max(lambda)
+    intercept = rep(-(median(lambda))-10, nPlants) #adjusted to truncate; can be random, too?
+    lambda <- lambda + intercept #get realistic values
+    hist(lambda)
+
+    # make lambdas neg = 0
+    negTo0 = function(x) { (x + abs(x)) / 2 }  ### function to efficiently redefine negative values to 0
+
+    lambda  <- negTo0(lambda)
+    hist(lambda)
+
+    #plot lambda regresions to see if they make sense…
+    plot(lambda ~ Abund_plant)
+    plot(lambda ~ Flower_Size)
+    plot(lambda ~ Nectar)
+    plot(lambda ~ Plant_family)
+
+    #add interaction that makes lambda 0 if phenology do not match
+    for(j in 1:nPlants){
+      if (Pheno_pol[i] == 0 & Pheno_plant[j] == 0){
+	      lambda[j] = 0}}
+
+    # Now we observe n Plants and observe the # of visits (perfectly)
+    # 
+
+    V <- rpois(nPlants, lambda) #error is added here, not need before. This is visits per day.
+    full_Ntw[,i] <- V
+
+    #Or inperfectly
+    y <- matrix(NA, nPlants, nVisits)
+    for(j in 1:nPlants) {
+      y[j,] <- rbinom(nVisits, V[j], p/nVisits)
+    }
+#we can add colnames here if needed...
+    P[[i]] <- y
+
+  }
+  else{
+  #Select random a family on which the pollinator is specialist
+
+  # we have 6 Plant_family
+  Fam_specialized <- sample(1:6, 1)
+
+  #use lambda from the other "if" here
+  lambda <- (rep(Abund_pol[i], length(Abund_plant)) * Abund_plant) + Flower_Size + (Nectar*25)
+  #lambda is a linear combination of both abundances, of flower size (scales to the range of half the abundances) and nectar (idem); Add plant morphology?
+  #min(lambda)
+  #mean(lambda)
+  #median(lambda)
+  #max(lambda)
+  intercept = rep(-(median(lambda))-20, nPlants) #adjusted to truncate; can be random, too?
+  lambda <- lambda + intercept #get realistic values
+  hist(lambda)
+
+  #make lambdas neg = 0
+
+  lambda  <- negTo0(lambda)
+  hist(lambda)
+
+  #add interaction que haga lambda 0 si pheno es x
+  for(j in 1:nPlants){
+    if (Pheno_pol[i] == 0 & Pheno_plant[j] == 0){
+	  lambda[j] = 0}}
+
+  #add interaction que haga lambda 0 si Fam es != Fam_specialized
+  for(j in 1:nPlants){
+    if (Plant_family[j] != Fam_specialized){
+	  lambda[j] = 0}
+	}
+
+  # Now we observe n Plants and observe the # of visits (perfectly)
+  # 
+
+  V <- rpois(nPlants, lambda)
+  full_Ntw[,i] <- V
+
+
+  #Or inperfectly
+  y <- matrix(NA, nPlants, nVisits)
+  for(j in 1:nPlants) {
+    y[j,] <- rbinom(nVisits, V[j], p/nVisits)
+  }
+  P[[i]] <- y
+  }
+}
+
+full_Ntw
+P
+sampled_Ntw <- matrix(ncol = nPolinators, nrow = nPlants) 
+for (i in 1:nPolinators){
+	for(j in 1:nPlants){
+sampled_Ntw[j,i] <- sum(P[[i]][j,])}}
+sampled_Ntw
+
+```
+
+Calculate some parameters
+-------
+
+
+```{r params}
+visweb(full_Ntw)
+plotweb(full_Ntw)
+plotweb(sampled_Ntw)
+networklevel(full_Ntw)
+specieslevel(full_Ntw)
+
+par(mfrow = c(2,1))
+visweb(full_Ntw)
+visweb(sampled_Ntw)
+networklevel(full_Ntw)$connectance
+networklevel(sampled_Ntw)$connectance
+
+networklevel(full_Ntw)$`links per species`
+networklevel(sampled_Ntw)$`links per species`
+
+#NOTES:
+#check that the networks using V (need to save) are nested, asimetrical, and with a conectance similar to the highly sampled networks
+
+#Store the values of the full matrix V; the observed matrix P and the estimated matrix O. Also need to keep track of specialists; generalists and no pheno overlap.
+
+```
+
+
+
+
+```
+
+Occupamcy Modles
+----------------
+
+```{r occ}
+# Format for unmarked and summarize
+estimated_Ntw <- matrix(ncol = nPolinators, nrow = nPlants)
+
+#NEED TO IMPLEMENT A TRY CATCH THAT MAKES 0 WHEN ALL THE SPECIES = 0.
+
+for (i in 1:length(P)){
+#i=4
+y <- as.data.frame(P[[i]])
+if (sum(y) == 0){
+	estimated_Ntw[,i] <- 0
+	}
+	else{
+umf <- unmarkedFramePCount(y=y, siteCovs=data.frame(Abund_plant = Abund_plant, Flower_Size = Flower_Size, Nectar = Nectar, Pheno_plant = Pheno_plant, Plant_family = Plant_family))
+summary(umf)
+
+# Fit a model and extract estimates
+# Detection covariates follow first tilde, then come abundance covariates
+
+fm.nmix1 <- pcount(~1 ~ Abund_plant, data=umf)
+fm.nmix3 <- pcount(~1 ~ Abund_plant + Nectar + Flower_Size, data=umf)
+beta1 <- coef(fm.nmix3) 
+
+#
+# Note, estimates of detection coefficients are on the logit-scale
+# When there are no covariates, we can back-transform using:
+
+#backTransform(fm.nmix1, type="det") # estimate with SE
+#backTransform(fm.nmix1, type="state") # estimate with SE
+
+#with cov's
+#plogis(beta1)
+
+# When covariates are present we can do something like
+#
+#plot(function(x) exp(beta1[1] + beta1[2]*x), 0, 30, xlab="Plant abundance", ylab="Expected Visitation")
+
+#plot(function(x) exp(beta1[1] + beta1[3]*x), 0, 1, xlab="Nectar", ylab="Expected Visitation")
+
+#plot(function(x) exp(beta1[1] + beta1[4]*x), 10, 60, xlab="Flower Size", ylab="Expected Visitation")
+
+# Or suppose you want predictions for new values of vegHt, say 1.2 and 3.1
+
+#estimated Network:
+Covs <- data.frame(Abund_plant = Abund_plant, Flower_Size = Flower_Size, Nectar = Nectar, Pheno_plant = Pheno_plant, Plant_family = Plant_family)
+
+estimated_Ntw[,i] <- round(predict(fm.nmix3, type="state", newdata= Covs, appendData=TRUE)$Predicted)
+
+
+#Predictions have to be accurate, i.e. by using abundance inside the range, and by not predicting families or traits not included.
+#newdat <- data.frame(Nectar = c(1,0), Flower_size = c(12, 45), Abund_plant =c(12, 31))
+#predict(fm.nmix3, type="state", newdata=newdat)
+}
+}
+
+
+
+
+P_values <- data.frame(Pheno_plant, Abund_plant, Flower_Size, Nectar, Plant_morphology, Plant_family, full = c(1:length(full_Ntw[,1])), sample= c(1:length(full_Ntw[,1])), estimated= c(1:length(full_Ntw[,1])))
+for (i in 1:length(full_Ntw[,1])){
+P_values[i,7] <- length(which(full_Ntw[i,] > 0))
+P_values[i,8] <- length(which(sampled_Ntw[i,] > 0))
+P_values[i,9] <- length(which(estimated_Ntw[i,] > 0))
+}
+
+A_values <- data.frame(Specialist, Pheno_pol, full = c(1:length(full_Ntw[1,])), sample= c(1:length(full_Ntw[1,])), estimated= c(1:length(full_Ntw[1,])))
+for (i in 1:length(full_Ntw[1,])){
+A_values[i,3] <- length(which(full_Ntw[,i] > 0))
+A_values[i,4] <- length(which(sampled_Ntw[,i] > 0))
+A_values[i,5] <- length(which(estimated_Ntw[,i] > 0))
+}
+
+
+P_values
+  
+A_values 
+
+sum(full_Ntw - sampled_Ntw)
+sum(full_Ntw - estimated_Ntw)
+
+```
+
+compare links per species:
+--------------------------
+
+```{r compare}
+par(mfrow = c(3,1))
+visweb(full_Ntw)
+visweb(sampled_Ntw)
+visweb(estimated_Ntw)
+networklevel(full_Ntw)$connectance
+networklevel(sampled_Ntw)$connectance
+networklevel(estimated_Ntw)$connectance
+
+networklevel(full_Ntw)$`links per species`
+networklevel(sampled_Ntw)$`links per species`
+networklevel(estimated_Ntw)$`links per species`
+
+```
+
+
+
+
